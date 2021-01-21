@@ -1,0 +1,21 @@
+<% require 'date' %>
+
+<h1>New Game</h1>
+<h2>Here is your grid:</h2>
+<div class="letters">
+<% @letters.each do |letter| %>
+  <%= letter %>
+<% end %>
+</div>
+<%= link_to "Refresh", new_path %>
+
+<% string = @letters.join(",") %>
+
+<p>What is the longest word you can find?</p>
+<form action="/score" method="post">
+  <input type="text" name="word">
+  <input type="hidden" name="start_time" value=<%= Time.now %>>
+  <input type="hidden" name="grid" value=<%= string %>>
+  <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+  <input type="submit" value="Play">
+</form>
