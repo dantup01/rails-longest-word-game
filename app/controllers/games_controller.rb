@@ -3,57 +3,30 @@ require 'json'
 require 'date'
 
 class GamesController < ApplicationController
+  VOWELS = %w(A E I O U Y)
+
   def new
-    @letters = generate_grid(9)
+    @letters = Array.new(5) { VOWELS.sample }
+    @letters += Array.new(5) { (('A'..'Z').to_a - VOWELS).sample }
+    @letters.shuffle!
   end
 
   def score
-    @word = params[:word]
-    @grid = params[:grid]
-    @start_time = params[:start_time].to_datetime
-    @end_time = Time.now
-    @result = run_game(@word, @grid, @start_time, @end_time)
-    @time_taken = @result[:time].round(2)
-    @score = @result[:score].to_i
-    @message = @result[:message]
+    @letters = params[:letters].split
+    @word = (params[:word] || "").upcase
+    @included = included?(@word, @letters)
+    @english_word = english_word?(@word)
   end
 
   private
 
-  def generate_grid(grid_size)
-    Array.new(grid_size) { ('A'..'Z').to_a[rand(26)] }
+  def included?(word, letters)
+    word.chars.all? { |letter| word.count(letter) <= letters.count(letter) }
   end
 
-  def english_word(attempt)
-    url = "https://wagon-dictionary.herokuapp.com/#{attempt}"
-    read_file = open(url).read
-    word_check = JSON.parse(read_file)
-    return word_check['found']
-  end
-
-  def included_in_grid(attempt, grid)
-    in_grid = attempt.upcase.chars.all? do |letter|
-      (attempt.upcase.count(letter) <= grid.count(letter))
-    end
-    return in_grid
-  end
-
-  def compute_score(attempt, start_time, end_time)
-    time_taken = end_time - start_time
-    score = (attempt.length / time_taken) * 20
-    return score
-  end
-
-  def run_game(attempt, grid, start_time, end_time)
-    result = { time: (end_time - start_time) }
-    result[:score] = 0
-    result[:message] = "Congratulations! Well Done!"
-    if !english_word(attempt)
-      result[:message] = "Sorry, this is not an English word. Please try again."
-    elsif !included_in_grid(attempt, grid)
-      result[:message] = "Your word is not in the grid provided."
-    else result[:score] = compute_score(attempt, start_time, end_time)
-    end
-    return result
+  def english_word?(word)
+    response = open("https://wagon-dictionary.herokuapp.com/#{word}")
+    json = JSON.parse(response.read)
+    json['found']
   end
 end
